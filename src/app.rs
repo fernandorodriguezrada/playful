@@ -28,6 +28,12 @@ pub struct App {
     pub status_message: Option<String>,
     pub status_time: Instant,
     pub change_folder_mode: bool,
+    pub command_mode: bool,
+    pub command_input: String,
+    pub show_help: bool,
+    pub marquee_offset: usize,
+    marquee_counter: usize,
+    prev_selected: usize,
     manual_stop: bool,
     pub cover_art: Option<Vec<u8>>,
     cover_art_decoded: Option<image::DynamicImage>,
@@ -61,6 +67,12 @@ impl App {
             status_message: None,
             status_time: Instant::now(),
             change_folder_mode: false,
+            command_mode: false,
+            command_input: String::new(),
+            show_help: false,
+            marquee_offset: 0,
+            marquee_counter: 0,
+            prev_selected: 0,
             manual_stop: false,
             cover_art: None,
             cover_art_decoded: None,
@@ -131,6 +143,15 @@ impl App {
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
+                if self.selected_index != self.prev_selected {
+                    self.marquee_offset = 0;
+                    self.marquee_counter = 0;
+                    self.prev_selected = self.selected_index;
+                }
+                self.marquee_counter += 1;
+                if self.marquee_counter % 4 == 0 {
+                    self.marquee_offset = self.marquee_offset.wrapping_add(1);
+                }
             }
         }
 
@@ -188,6 +209,15 @@ impl App {
         if self.change_folder_mode {
             return self.handle_change_folder_key(key);
         }
+        if self.command_mode {
+            return self.handle_command_key(key);
+        }
+        if self.show_help {
+            if matches!(key.code, KeyCode::Esc | KeyCode::Char('q')) {
+                self.show_help = false;
+            }
+            return Ok(true);
+        }
 
         match key.code {
             KeyCode::Down | KeyCode::Char('j') => {
@@ -244,6 +274,10 @@ impl App {
                 self.manual_stop = true;
                 self.player.stop()?;
                 self.set_status("Stopped");
+            }
+            KeyCode::Char(':') => {
+                self.command_mode = true;
+                self.command_input.clear();
             }
             KeyCode::Char('c') => {
                 self.change_folder_mode = true;
@@ -315,6 +349,73 @@ impl App {
         Ok(true)
     }
 
+    fn handle_command_key(&mut self, key: event::KeyEvent) -> Result<bool> {
+        match key.code {
+            KeyCode::Esc => {
+                self.command_mode = false;
+                self.command_input.clear();
+            }
+            KeyCode::Char(c) => {
+                self.command_input.push(c);
+            }
+            KeyCode::Backspace => {
+                self.command_input.pop();
+            }
+            KeyCode::Enter => {
+                let cmd = self.command_input.trim().to_lowercase();
+                self.command_mode = false;
+                self.command_input.clear();
+                match cmd.as_str() {
+                    "help" | "h" | "?" => {
+                        self.show_help = true;
+                    }
+                    "refresh" | "r" => {
+                        if !self.config.music_folder.as_os_str().is_empty() {
+                            self.library = scan_library(&self.config.music_folder);
+                            self.selected_index = 0;
+                            let count = self.library.len();
+                            self.set_status(&format!("Library refreshed! {} tracks", count));
+                        }
+                    }
+                    "quit" | "q" => return Ok(false),
+                    "play" => {
+                        if !self.library.is_empty() {
+                            self.play_selected()?;
+                        }
+                    }
+                    "pause" => {
+                        if !self.player_state.is_idle {
+                            self.manual_stop = false;
+                            self.player.toggle_pause()?;
+                        }
+                    }
+                    "stop" | "s" => {
+                        self.manual_stop = true;
+                        self.player.stop()?;
+                        self.set_status("Stopped");
+                    }
+                    "next" | "n" => {
+                        self.play_next();
+                    }
+                    "prev" | "p" => {
+                        self.play_prev();
+                    }
+                    vol if vol.starts_with("volume ") || vol.starts_with("vol ") => {
+                        let num_str = vol.split_whitespace().last().unwrap_or("50");
+                        if let Ok(v) = num_str.parse::<f64>() {
+                            let vol = v.clamp(0.0, 100.0);
+                            self.player.set_volume(vol)?;
+                            self.set_status(&format!("Volume: {:.0}%", vol));
+                        }
+                    }
+                    _ => self.set_status(&format!("Unknown command: {}", cmd)),
+                }
+            }
+            _ => {}
+        }
+        Ok(true)
+    }
+
     fn play_selected(&mut self) -> Result<()> {
         if self.selected_index < self.library.len() {
             let track_path = self.library[self.selected_index].path.clone();
@@ -346,14 +447,15 @@ impl App {
             let max_dim = 300u32;
             let w = img.width();
             let h = img.height();
-            if w > max_dim || h > max_dim {
+            let resized = if w > max_dim || h > max_dim {
                 let ratio = if w > h { max_dim as f64 / w as f64 } else { max_dim as f64 / h as f64 };
                 let nw = (w as f64 * ratio).round() as u32;
                 let nh = (h as f64 * ratio).round() as u32;
                 img.resize_exact(nw, nh, image::imageops::FilterType::Lanczos3)
             } else {
                 img
-            }
+            };
+            round_corners(resized, 0.08)
         });
         self.current_cover_path = Some(path.to_path_buf());
         self.art_needs_render = true;
@@ -441,4 +543,33 @@ impl App {
 
         let _ = viuer::print(img, &config);
     }
+}
+
+fn round_corners(img: image::DynamicImage, radius_pct: f64) -> image::DynamicImage {
+    let mut rgba = img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+    let r = ((w.min(h) as f64) * radius_pct).round() as u32;
+    let r = r.max(1);
+    let r_sq = r * r;
+
+    for y in 0..h {
+        for x in 0..w {
+            let (dx, dy) = if x < r && y < r {
+                (r - 1 - x, r - 1 - y)
+            } else if x >= w - r && y < r {
+                (x - (w - r), r - 1 - y)
+            } else if x < r && y >= h - r {
+                (r - 1 - x, y - (h - r))
+            } else if x >= w - r && y >= h - r {
+                (x - (w - r), y - (h - r))
+            } else {
+                continue;
+            };
+            if dx * dx + dy * dy > r_sq {
+                rgba.get_pixel_mut(x, y).0[3] = 0;
+            }
+        }
+    }
+
+    image::DynamicImage::ImageRgba8(rgba)
 }

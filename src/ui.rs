@@ -1,7 +1,7 @@
 use crate::app::{App, AppScreen};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::prelude::*;
-use ratatui::widgets::*;
+use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap, *};
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -18,11 +18,11 @@ fn set_album_art_area(rect: Rect) {
 }
 
 const RAINBOW_COLORS: [Color; 5] = [
-    Color::Rgb(163, 241, 203),
-    Color::Rgb(177, 211, 254),
-    Color::Rgb(223, 184, 255),
-    Color::Rgb(255, 183, 211),
-    Color::Rgb(97, 114, 133),
+    Color::Rgb(255, 183, 211), // K — pink
+    Color::Rgb(223, 184, 255), // P — light purple
+    Color::Rgb(177, 211, 254), // C — light blue
+    Color::Rgb(163, 241, 203), // T — mint green
+    Color::Rgb(97, 114, 133),  // D — dim gray
 ];
 
 pub fn render(f: &mut Frame, app: &App) {
@@ -95,6 +95,12 @@ fn render_setup(f: &mut Frame, app: &App) {
 fn render_main(f: &mut Frame, app: &App) {
     let area = f.area();
 
+    if app.show_help {
+        set_album_art_area(Rect::new(0, 0, 0, 0));
+        render_help(f, area);
+        return;
+    }
+
     if app.change_folder_mode {
         set_album_art_area(Rect::new(0, 0, 0, 0));
         render_change_folder_fullscreen(f, area, app);
@@ -112,7 +118,26 @@ fn render_main(f: &mut Frame, app: &App) {
 
     render_header(f, chunks[0]);
     render_content(f, chunks[1], app);
-    render_now_playing(f, chunks[2], app);
+
+    if app.command_mode {
+        render_command_input(f, chunks[2], app);
+    } else {
+        render_now_playing(f, chunks[2], app);
+    }
+}
+
+fn render_command_input(f: &mut Frame, area: Rect, app: &App) {
+    let input = Paragraph::new(app.command_input.as_str())
+        .style(Style::default().fg(Color::Rgb(177, 211, 254)))
+        .block(
+            Block::default()
+                .title(" Command ")
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Rgb(97, 114, 133))),
+        );
+    f.render_widget(input, area);
+    f.set_cursor_position((area.x + 1 + app.command_input.len() as u16, area.y + 1));
 }
 
 fn render_header(f: &mut Frame, area: Rect) {
@@ -161,14 +186,81 @@ fn render_content(f: &mut Frame, area: Rect, app: &App) {
     if has_art {
         let top_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Length(14), Constraint::Min(1)])
+            .constraints([Constraint::Min(1), Constraint::Length(14)])
             .split(right_chunks[0]);
-        set_album_art_area(top_chunks[0]);
-        render_file_details(f, top_chunks[1], app);
+        render_file_details(f, top_chunks[0], app);
+        set_album_art_area(top_chunks[1]);
     } else {
         set_album_art_area(Rect::new(0, 0, 0, 0));
     }
     render_info_panel(f, right_chunks[1], app);
+}
+
+pub fn render_help(f: &mut Frame, area: Rect) {
+    let mut lines: Vec<Line> = Vec::new();
+
+    let title = "  ♪ Playful  ";
+    let mut title_spans: Vec<Span> = title.chars().enumerate()
+        .map(|(i, c)| Span::styled(c.to_string(), Style::default().fg(RAINBOW_COLORS[i % 5]).add_modifier(Modifier::BOLD)))
+        .collect();
+    title_spans.push(Span::styled("  ", Style::default()));
+    title_spans.push(Span::styled("—", Style::default().fg(Color::Rgb(97, 114, 133))));
+    title_spans.push(Span::styled("  ", Style::default()));
+    title_spans.push(Span::styled("terminal music player", Style::default().add_modifier(Modifier::ITALIC).fg(Color::Rgb(150, 150, 170))));
+    lines.push(Line::from(title_spans));
+    lines.push(Line::from(Span::raw("")));
+
+    let sections: &[(&str, &[(&str, &str)])] = &[
+        ("Keys", &[
+            ("↑↓  /  jk", "Navigate track list"),
+            ("Enter",     "Play selected track"),
+            ("Space",     "Play / Pause"),
+            ("n  /  p",   "Next / Previous track"),
+            ("s",          "Stop playback"),
+            ("+  /  -",   "Volume up / down"),
+            (".  /  ,",   "Seek forward / back 5s"),
+            ("c",          "Change music folder"),
+            ("r",          "Refresh library"),
+            (":",          "Open command palette"),
+            ("q",          "Quit"),
+        ]),
+        ("Commands", &[
+            ("help",             "Show this help screen"),
+            ("quit",             "Exit the application"),
+            ("refresh",          "Rescan music library"),
+            ("play",             "Play selected track"),
+            ("pause",            "Play / Pause"),
+            ("stop",             "Stop playback"),
+            ("next",             "Next track"),
+            ("prev",             "Previous track"),
+            ("volume <0-100>",   "Set volume level"),
+        ]),
+    ];
+
+    let col_width = 32usize;
+
+    for (section_name, items) in sections {
+        let sec: Vec<Span> = section_name.chars().enumerate()
+            .map(|(i, c)| Span::styled(c.to_string(), Style::default().fg(RAINBOW_COLORS[i % 5]).add_modifier(Modifier::BOLD)))
+            .collect();
+        lines.push(Line::from(sec));
+        for (cmd, desc) in *items {
+            let padded = format!("{:<1$}", cmd, col_width);
+            lines.push(Line::from(vec![
+                Span::styled(format!("    {}", padded), Style::default().fg(Color::Rgb(177, 211, 254))),
+                Span::styled(*desc, Style::default().fg(Color::Rgb(97, 114, 133))),
+            ]));
+        }
+        lines.push(Line::from(Span::raw("")));
+    }
+
+    lines.push(Line::from(vec![Span::styled(
+        "  Esc or q to close",
+        Style::default().fg(Color::Rgb(97, 114, 133)),
+    )]));
+
+    let paragraph = Paragraph::new(lines).alignment(Alignment::Left);
+    f.render_widget(paragraph, area);
 }
 
 fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
@@ -211,6 +303,23 @@ fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
     f.set_cursor_position((cursor_x.min(right_edge), input_rect.y + 1));
 }
 
+fn marquee_text(text: &str, offset: usize, cell_width: usize) -> String {
+    if text.chars().count() <= cell_width {
+        return text.to_string();
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let total = chars.len() + 8 + 8;
+    let cursor = offset % total;
+    if cursor < 8 {
+        return text.to_string();
+    }
+    let scroll = cursor - 8;
+    if scroll >= chars.len() {
+        return text.to_string();
+    }
+    chars[scroll..].iter().collect()
+}
+
 fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
     if app.library.is_empty() {
         let msg = Paragraph::new("No music files found.\nPress 'c' to set your music folder.")
@@ -226,56 +335,91 @@ fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let items: Vec<ListItem> = app
+    let items_len = app.library.len();
+    let header_cells = ["Track", "Artist", "Album"]
+        .iter()
+        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Rgb(150, 150, 170)).add_modifier(Modifier::BOLD)));
+    let header = Row::new(header_cells);
+
+    let inner_w = area.width.saturating_sub(2);
+    let track_cw = (inner_w as f64 * 0.50).floor() as usize;
+    let artist_cw = (inner_w as f64 * 0.25).floor() as usize;
+    let album_cw = (inner_w as f64 * 0.25).floor() as usize;
+    let track_cw = track_cw.saturating_sub(3);
+    let artist_cw = artist_cw.saturating_sub(2);
+    let album_cw = album_cw.saturating_sub(2);
+
+    let rows: Vec<Row> = app
         .library
         .iter()
         .enumerate()
         .map(|(i, track)| {
             let is_selected = i == app.selected_index;
-            let prefix = if is_selected { "▸ " } else { "  " };
-            let title = track.title.as_str();
-
-            let artist = if track.artist == "Unknown Artist" && !track.album.is_empty() {
-                track.album.as_str()
-            } else {
-                track.artist.as_str()
-            };
-
-            let dur = format_duration(track.duration);
-            let content = format!("{}{}  ·  {}  [{}]", prefix, title, artist, dur);
-
             let style = if is_selected {
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(Color::Rgb(255, 183, 211))
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
-            ListItem::new(content).style(style)
+
+            let title_text = if is_selected {
+                marquee_text(&track.title, app.marquee_offset, track_cw)
+            } else {
+                track.title.clone()
+            };
+
+            let artist_text = if is_selected {
+                marquee_text(&track.artist, app.marquee_offset, artist_cw)
+            } else {
+                track.artist.clone()
+            };
+
+            let album_text = if is_selected {
+                marquee_text(&track.album, app.marquee_offset, album_cw)
+            } else {
+                track.album.clone()
+            };
+
+            Row::new(vec![
+                Cell::from(title_text),
+                Cell::from(artist_text),
+                Cell::from(album_text),
+            ])
+            .style(style)
         })
         .collect();
 
-    let items_len = items.len();
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(format!(
-                    " Library ({} {}) ",
-                    items_len,
-                    if items_len == 1 { "track" } else { "tracks" }
-                ))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        )
-        .highlight_style(
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        );
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Percentage(50),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ],
+    )
+    .header(header)
+    .block(
+        Block::default()
+            .title(format!(
+                " Library ({} {}) ",
+                items_len,
+                if items_len == 1 { "track" } else { "tracks" }
+            ))
+            .title_style(Style::default().fg(Color::Rgb(177, 211, 254)))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded),
+    )
+    .row_highlight_style(
+        Style::default()
+            .fg(Color::Rgb(255, 183, 211))
+            .add_modifier(Modifier::BOLD),
+    )
+    .highlight_symbol("▸ ");
 
-    let mut list_state = ListState::default();
-    list_state.select(Some(app.selected_index));
-    f.render_stateful_widget(list, area, &mut list_state);
+    let mut table_state = TableState::default();
+    table_state.select(Some(app.selected_index));
+    f.render_stateful_widget(table, area, &mut table_state);
 }
 
 fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
@@ -288,7 +432,6 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         )]));
-        lines.push(Line::from(Span::raw("")));
         lines.push(Line::from(vec![
             Span::styled("Title:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
             Span::styled(&track.title, Style::default().fg(Color::White)),
@@ -301,6 +444,18 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("Album:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
             Span::styled(&track.album, Style::default().fg(Color::White)),
         ]));
+        if !track.genre.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("Genre:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
+                Span::styled(&track.genre, Style::default().fg(Color::White)),
+            ]));
+        }
+        if !track.track_number.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("Track:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
+                Span::styled(&track.track_number, Style::default().fg(Color::White)),
+            ]));
+        }
         lines.push(Line::from(vec![
             Span::styled("Length:  ", Style::default().fg(Color::Rgb(150, 150, 170))),
             Span::styled(
@@ -315,7 +470,6 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         )));
     }
 
-    lines.push(Line::from(Span::raw("")));
     lines.push(Line::from(vec![Span::styled(
         "Controls",
         Style::default()
@@ -333,6 +487,7 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         ("c", "Change folder"),
         ("r", "Refresh"),
         ("q", "Quit"),
+        (":",  "Command palette"),
     ];
     for (key, action) in &shortcuts {
         lines.push(Line::from(vec![
@@ -345,9 +500,11 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
     }
 
     let paragraph = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
         .block(
             Block::default()
                 .title(" Info ")
+                .title_style(Style::default().fg(Color::Rgb(177, 211, 254)))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         );
@@ -355,24 +512,79 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(paragraph, area);
 }
 
+fn format_sample_rate(hz: u32) -> String {
+    if hz == 0 { return String::new() }
+    format!("{:.1} kHz", hz as f64 / 1000.0)
+}
+
+fn format_channels(n: u8) -> String {
+    match n {
+        1 => "Mono".into(),
+        2 => "Stereo".into(),
+        _ if n > 0 => format!("{} ch", n),
+        _ => String::new(),
+    }
+}
+
+fn format_file_size(bytes: u64) -> String {
+    if bytes == 0 { return String::new() }
+    let units = ["B", "KB", "MB", "GB"];
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size > 1024.0 && unit < 3 {
+        size /= 1024.0;
+        unit += 1;
+    }
+    format!("{:.1} {}", size, units[unit])
+}
+
 fn render_file_details(f: &mut Frame, area: Rect, app: &App) {
     let mut lines = Vec::new();
 
+    let plabel = |s: &'static str| Span::styled(s, Style::default().fg(Color::Rgb(150, 150, 170)));
+
     if let Some(track) = app.library.get(app.selected_index) {
-        lines.push(Line::from(vec![
-            Span::styled("Format: ", Style::default().fg(Color::Rgb(150, 150, 170))),
-            Span::styled(&track.format, Style::default().fg(Color::White)),
-        ]));
+        lines.push(Line::from(vec![plabel("Format: "), Span::styled(&track.format, Style::default().fg(Color::White))]));
         if track.bitrate > 0 {
             lines.push(Line::from(vec![
-                Span::styled("Bitrate: ", Style::default().fg(Color::Rgb(150, 150, 170))),
+                plabel("Bitrate: "),
                 Span::styled(format!("{}k", track.bitrate), Style::default().fg(Color::White)),
+            ]));
+        }
+        if track.sample_rate > 0 {
+            lines.push(Line::from(vec![
+                plabel("Sample:  "),
+                Span::styled(format_sample_rate(track.sample_rate), Style::default().fg(Color::White)),
+            ]));
+        }
+        if !track.modified.is_empty() {
+            lines.push(Line::from(vec![
+                plabel("Date:    "),
+                Span::styled(&track.modified, Style::default().fg(Color::White)),
+            ]));
+        }
+        if track.channels > 0 {
+            lines.push(Line::from(vec![
+                plabel("Channels:"),
+                Span::styled(format_channels(track.channels), Style::default().fg(Color::White)),
+            ]));
+        }
+        if !track.encoding.is_empty() && track.encoding != "Unknown" {
+            lines.push(Line::from(vec![
+                plabel("Type:    "),
+                Span::styled(track.encoding.clone(), Style::default().fg(Color::White)),
             ]));
         }
         if track.year > 0 {
             lines.push(Line::from(vec![
-                Span::styled("Year:    ", Style::default().fg(Color::Rgb(150, 150, 170))),
+                plabel("Year:    "),
                 Span::styled(track.year.to_string(), Style::default().fg(Color::White)),
+            ]));
+        }
+        if track.file_size > 0 {
+            lines.push(Line::from(vec![
+                plabel("Size:    "),
+                Span::styled(format_file_size(track.file_size), Style::default().fg(Color::White)),
             ]));
         }
     }
@@ -385,6 +597,7 @@ fn render_file_details(f: &mut Frame, area: Rect, app: &App) {
         .block(
             Block::default()
                 .title(" File Details ")
+                .title_style(Style::default().fg(Color::Rgb(177, 211, 254)))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         );
@@ -416,14 +629,14 @@ fn render_now_playing(f: &mut Frame, area: Rect, app: &App) {
                 .unwrap_or_else(|| "Nothing Playing".to_string())
         });
 
-    let status_icon = if state.is_playing {
-        "▶"
+    let status_text = if state.is_playing {
+        "Now Playing"
     } else if state.is_paused {
-        "⏸"
+        "Paused"
     } else if !state.is_idle {
-        "▶"
+        "Now Playing"
     } else {
-        "⏹"
+        "No Playback"
     };
 
     let volume = format!("VOL {:3.0}%", state.volume);
@@ -435,7 +648,7 @@ fn render_now_playing(f: &mut Frame, area: Rect, app: &App) {
         let ratio = state.position.as_secs_f64() / state.duration.as_secs_f64();
         let filled = (ratio * bar_width as f64).round() as usize;
         let filled = filled.min(bar_width);
-        let bar = "━".repeat(filled) + "●" + &"━".repeat(bar_width.saturating_sub(filled + 1));
+        let bar = "━".repeat(filled) + "⬤" + &"━".repeat(bar_width.saturating_sub(filled + 1));
         bar
     } else {
         "━".repeat(bar_width)
@@ -443,7 +656,7 @@ fn render_now_playing(f: &mut Frame, area: Rect, app: &App) {
 
     let mut spans_top = vec![
         Span::styled(
-            format!(" {} ", status_icon),
+            format!(" {} ", status_text),
             Style::default()
                 .fg(Color::Green)
                 .add_modifier(Modifier::BOLD),
@@ -481,7 +694,10 @@ fn render_now_playing(f: &mut Frame, area: Rect, app: &App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
-    let paragraph = Paragraph::new(Text::from(vec![line1, line2])).block(block);
+    let paragraph = Paragraph::new(Text::from(vec![
+        line1,
+        line2,
+    ])).block(block);
     f.render_widget(paragraph, area);
 }
 
