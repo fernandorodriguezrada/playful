@@ -270,6 +270,7 @@ fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
         .constraints([
             Constraint::Length(3),
             Constraint::Length(1),
+            Constraint::Length(1),
             Constraint::Length(3),
             Constraint::Length(1),
         ])
@@ -282,7 +283,15 @@ fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let input_rect = chunks[2];
+    let current = app.config.music_folder.display().to_string();
+    let current_label = Paragraph::new(Line::from(vec![
+        Span::styled("Current: ", Style::default().fg(D2)),
+        Span::styled(current, Style::default().fg(D)),
+    ]))
+    .alignment(Alignment::Center);
+    f.render_widget(current_label, chunks[2]);
+
+    let input_rect = chunks[3];
 
     let input = Paragraph::new(app.setup_path.as_str())
         .style(Style::default().fg(C))
@@ -293,7 +302,7 @@ fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
     let help = Paragraph::new("Enter to confirm  ·  Esc to cancel")
         .style(Style::default().fg(D))
         .alignment(Alignment::Center);
-    f.render_widget(help, chunks[3]);
+    f.render_widget(help, chunks[4]);
 
     let right_edge = input_rect.x + input_rect.width.saturating_sub(2);
     let cursor_x = input_rect.x + 1 + app.setup_path.len() as u16;
