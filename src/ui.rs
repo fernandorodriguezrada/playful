@@ -17,13 +17,14 @@ fn set_album_art_area(rect: Rect) {
     *lock.lock().unwrap() = Some(rect);
 }
 
-const RAINBOW_COLORS: [Color; 5] = [
-    Color::Rgb(255, 183, 211), // K — pink
-    Color::Rgb(223, 184, 255), // P — light purple
-    Color::Rgb(177, 211, 254), // C — light blue
-    Color::Rgb(163, 241, 203), // T — mint green
-    Color::Rgb(97, 114, 133),  // D — dim gray
-];
+const RAINBOW_COLORS: [Color; 5] = [K, P, C, T, D];
+
+const D2: Color = Color::Rgb(130, 145, 165);
+const K: Color = Color::Rgb(255, 183, 211);
+const P: Color = Color::Rgb(223, 184, 255);
+const C: Color = Color::Rgb(177, 211, 254);
+const T: Color = Color::Rgb(163, 241, 203);
+const D: Color = Color::Rgb(97, 114, 133);
 
 pub fn render(f: &mut Frame, app: &App) {
     match app.screen {
@@ -67,23 +68,23 @@ fn render_setup(f: &mut Frame, app: &App) {
     f.render_widget(rainbow_title, chunks[0]);
 
     let prompt = Paragraph::new("Enter your music folder path:")
-        .style(Style::default().fg(Color::Cyan))
+        .style(Style::default().fg(C))
         .alignment(Alignment::Center);
     f.render_widget(prompt, chunks[2]);
 
     let input_rect = chunks[3];
     let input = Paragraph::new(app.setup_path.as_str())
-        .style(Style::default().fg(Color::Rgb(177, 211, 254)))
+        .style(Style::default().fg(C))
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Rgb(97, 114, 133))),
+                .border_style(Style::default().fg(D)),
         );
     f.render_widget(input, input_rect);
 
     let help = Paragraph::new("Enter to confirm  ·  Esc to quit")
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(D))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[4]);
 
@@ -128,13 +129,13 @@ fn render_main(f: &mut Frame, app: &App) {
 
 fn render_command_input(f: &mut Frame, area: Rect, app: &App) {
     let input = Paragraph::new(app.command_input.as_str())
-        .style(Style::default().fg(Color::Rgb(177, 211, 254)))
+        .style(Style::default().fg(C))
         .block(
             Block::default()
                 .title(" Command ")
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Rgb(97, 114, 133))),
+                .border_style(Style::default().fg(D)),
         );
     f.render_widget(input, area);
     f.set_cursor_position((area.x + 1 + app.command_input.len() as u16, area.y + 1));
@@ -204,9 +205,9 @@ pub fn render_help(f: &mut Frame, area: Rect) {
         .map(|(i, c)| Span::styled(c.to_string(), Style::default().fg(RAINBOW_COLORS[i % 5]).add_modifier(Modifier::BOLD)))
         .collect();
     title_spans.push(Span::styled("  ", Style::default()));
-    title_spans.push(Span::styled("—", Style::default().fg(Color::Rgb(97, 114, 133))));
+    title_spans.push(Span::styled("—", Style::default().fg(D)));
     title_spans.push(Span::styled("  ", Style::default()));
-    title_spans.push(Span::styled("terminal music player", Style::default().add_modifier(Modifier::ITALIC).fg(Color::Rgb(150, 150, 170))));
+    title_spans.push(Span::styled("terminal music player", Style::default().add_modifier(Modifier::ITALIC).fg(D2)));
     lines.push(Line::from(title_spans));
     lines.push(Line::from(Span::raw("")));
 
@@ -247,8 +248,8 @@ pub fn render_help(f: &mut Frame, area: Rect) {
         for (cmd, desc) in *items {
             let padded = format!("{:<1$}", cmd, col_width);
             lines.push(Line::from(vec![
-                Span::styled(format!("    {}", padded), Style::default().fg(Color::Rgb(177, 211, 254))),
-                Span::styled(*desc, Style::default().fg(Color::Rgb(97, 114, 133))),
+                Span::styled(format!("    {}", padded), Style::default().fg(C)),
+                Span::styled(*desc, Style::default().fg(D)),
             ]));
         }
         lines.push(Line::from(Span::raw("")));
@@ -256,7 +257,7 @@ pub fn render_help(f: &mut Frame, area: Rect) {
 
     lines.push(Line::from(vec![Span::styled(
         "  Esc or q to close",
-        Style::default().fg(Color::Rgb(97, 114, 133)),
+        Style::default().fg(D),
     )]));
 
     let paragraph = Paragraph::new(lines).alignment(Alignment::Left);
@@ -281,20 +282,20 @@ fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
         .split(area);
 
     let title = Paragraph::new("Change Music Folder")
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .style(Style::default().fg(C).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
     let input_rect = chunks[2];
 
     let input = Paragraph::new(app.setup_path.as_str())
-        .style(Style::default().fg(Color::Rgb(177, 211, 254)))
+        .style(Style::default().fg(C))
         .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::Rgb(97, 114, 133))));
+            .border_style(Style::default().fg(D)));
     f.render_widget(input, input_rect);
 
     let help = Paragraph::new("Enter to confirm  ·  Esc to cancel")
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(D))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[3]);
 
@@ -323,7 +324,7 @@ fn marquee_text(text: &str, offset: usize, _cell_width: usize) -> String {
 fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
     if app.library.is_empty() {
         let msg = Paragraph::new("No music files found.\nPress 'c' to set your music folder.")
-            .style(Style::default().fg(Color::DarkGray))
+            .style(Style::default().fg(D))
             .alignment(Alignment::Center)
             .block(
                 Block::default()
@@ -338,7 +339,7 @@ fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
     let items_len = app.library.len();
     let header_cells = ["Track", "Artist", "Album"]
         .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Rgb(150, 150, 170)).add_modifier(Modifier::BOLD)));
+        .map(|h| Cell::from(*h).style(Style::default().fg(D2).add_modifier(Modifier::BOLD)));
     let header = Row::new(header_cells);
 
     let inner_w = area.width.saturating_sub(2);
@@ -357,7 +358,7 @@ fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
             let is_selected = i == app.selected_index;
             let style = if is_selected {
                 Style::default()
-                    .fg(Color::Rgb(255, 183, 211))
+                    .fg(K)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -406,13 +407,13 @@ fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
                 items_len,
                 if items_len == 1 { "track" } else { "tracks" }
             ))
-            .title_style(Style::default().fg(Color::Rgb(177, 211, 254)))
+            .title_style(Style::default().fg(C))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded),
     )
     .row_highlight_style(
         Style::default()
-            .fg(Color::Rgb(255, 183, 211))
+            .fg(K)
             .add_modifier(Modifier::BOLD),
     )
     .highlight_symbol("▸ ");
@@ -429,35 +430,35 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         lines.push(Line::from(vec![Span::styled(
             "Track Info",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(P)
                 .add_modifier(Modifier::BOLD),
         )]));
         lines.push(Line::from(vec![
-            Span::styled("Title:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
+            Span::styled("Title:   ", Style::default().fg(D2)),
             Span::styled(&track.title, Style::default().fg(Color::White)),
         ]));
         lines.push(Line::from(vec![
-            Span::styled("Artist:  ", Style::default().fg(Color::Rgb(150, 150, 170))),
+            Span::styled("Artist:  ", Style::default().fg(D2)),
             Span::styled(&track.artist, Style::default().fg(Color::White)),
         ]));
         lines.push(Line::from(vec![
-            Span::styled("Album:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
+            Span::styled("Album:   ", Style::default().fg(D2)),
             Span::styled(&track.album, Style::default().fg(Color::White)),
         ]));
         if !track.genre.is_empty() {
             lines.push(Line::from(vec![
-                Span::styled("Genre:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
+                Span::styled("Genre:   ", Style::default().fg(D2)),
                 Span::styled(&track.genre, Style::default().fg(Color::White)),
             ]));
         }
         if !track.track_number.is_empty() {
             lines.push(Line::from(vec![
-                Span::styled("Track:   ", Style::default().fg(Color::Rgb(150, 150, 170))),
+                Span::styled("Track:   ", Style::default().fg(D2)),
                 Span::styled(&track.track_number, Style::default().fg(Color::White)),
             ]));
         }
         lines.push(Line::from(vec![
-            Span::styled("Length:  ", Style::default().fg(Color::Rgb(150, 150, 170))),
+            Span::styled("Length:  ", Style::default().fg(D2)),
             Span::styled(
                 format_duration(track.duration),
                 Style::default().fg(Color::White),
@@ -466,14 +467,14 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
     } else {
         lines.push(Line::from(Span::styled(
             "No tracks in library",
-            Style::default().fg(Color::Rgb(150, 150, 170)),
+            Style::default().fg(D2),
         )));
     }
 
     lines.push(Line::from(vec![Span::styled(
         "Controls",
         Style::default()
-            .fg(Color::Cyan)
+            .fg(P)
             .add_modifier(Modifier::BOLD),
     )]));
     let shortcuts = [
@@ -493,9 +494,9 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         lines.push(Line::from(vec![
             Span::styled(
                 format!("  {:<8}", key),
-                Style::default().fg(Color::Rgb(177, 211, 254)),
+                Style::default().fg(C),
             ),
-            Span::styled(*action, Style::default().fg(Color::Rgb(150, 150, 170))),
+            Span::styled(*action, Style::default().fg(D2)),
         ]));
     }
 
@@ -504,7 +505,7 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         .block(
             Block::default()
                 .title(" Info ")
-                .title_style(Style::default().fg(Color::Rgb(177, 211, 254)))
+                .title_style(Style::default().fg(C))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         );
@@ -541,7 +542,7 @@ fn format_file_size(bytes: u64) -> String {
 fn render_file_details(f: &mut Frame, area: Rect, app: &App) {
     let mut lines = Vec::new();
 
-    let plabel = |s: &'static str| Span::styled(s, Style::default().fg(Color::Rgb(150, 150, 170)));
+    let plabel = |s: &'static str| Span::styled(s, Style::default().fg(D2));
 
     if let Some(track) = app.library.get(app.selected_index) {
         lines.push(Line::from(vec![plabel("Format: "), Span::styled(&track.format, Style::default().fg(Color::White))]));
@@ -597,7 +598,7 @@ fn render_file_details(f: &mut Frame, area: Rect, app: &App) {
         .block(
             Block::default()
                 .title(" File Details ")
-                .title_style(Style::default().fg(Color::Rgb(177, 211, 254)))
+                .title_style(Style::default().fg(C))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         );
@@ -658,10 +659,10 @@ fn render_now_playing(f: &mut Frame, area: Rect, app: &App) {
         Span::styled(
             format!(" {} ", status_text),
             Style::default()
-                .fg(Color::Green)
+                .fg(T)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+        Span::styled(" │ ", Style::default().fg(D)),
         Span::styled(
             &track_title,
             Style::default()
@@ -674,20 +675,20 @@ fn render_now_playing(f: &mut Frame, area: Rect, app: &App) {
         spans_top.push(Span::raw("  "));
         spans_top.push(Span::styled(
             format!("[{}]", msg),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(K),
         ));
     }
 
     let line1 = Line::from(spans_top);
 
     let line2 = Line::from(vec![
-        Span::styled(pos_str, Style::default().fg(Color::Cyan)),
+        Span::styled(pos_str, Style::default().fg(C)),
         Span::styled(" ", Style::default()),
-        Span::styled(progress, Style::default().fg(Color::Cyan)),
+        Span::styled(progress, Style::default().fg(C)),
         Span::styled(" ", Style::default()),
-        Span::styled(dur_str, Style::default().fg(Color::Cyan)),
-        Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-        Span::styled(volume, Style::default().fg(Color::Green)),
+        Span::styled(dur_str, Style::default().fg(C)),
+        Span::styled(" │ ", Style::default().fg(D)),
+        Span::styled(volume, Style::default().fg(T)),
     ]);
 
     let block = Block::default()
