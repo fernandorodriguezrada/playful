@@ -265,10 +265,6 @@ pub fn render_help(f: &mut Frame, area: Rect) {
 }
 
 fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
-    let overlay = Block::default()
-        .style(Style::default().bg(Color::Rgb(20, 20, 28)));
-    f.render_widget(overlay, area);
-
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
