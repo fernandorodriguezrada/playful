@@ -222,7 +222,7 @@ pub fn render_help(f: &mut Frame, area: Rect) {
             (".  /  ,",   "Seek forward / back 5s"),
             ("c",          "Change music folder"),
             ("r",          "Refresh library"),
-            ("Ctrl+;",     "Open command palette"),
+            ("Alt+;",      "Open command palette"),
             ("q",          "Quit"),
         ]),
         ("Commands", &[
@@ -493,7 +493,7 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         ("c", "Change folder"),
         ("r", "Refresh"),
         ("q", "Quit"),
-        ("Ctrl+;",  "Command palette"),
+        ("Alt+;",  "Command palette"),
     ];
     for (key, action) in &shortcuts {
         lines.push(Line::from(vec![

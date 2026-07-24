@@ -280,7 +280,7 @@ impl App {
                 self.player.stop()?;
                 self.set_status("Stopped");
             }
-            KeyCode::Char(';') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            KeyCode::Char(';') if key.modifiers.contains(KeyModifiers::ALT) => {
                 self.command_mode = true;
                 self.command_input.clear();
             }
