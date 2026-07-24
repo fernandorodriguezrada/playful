@@ -282,10 +282,16 @@ impl App {
                     self.player.toggle_pause()?;
                 }
             }
-            KeyCode::Right | KeyCode::Char('n') => {
+            KeyCode::Right => {
+                self.player.seek(5.0)?;
+            }
+            KeyCode::Left => {
+                self.player.seek(-5.0)?;
+            }
+            KeyCode::Char('n') => {
                 self.play_next();
             }
-            KeyCode::Left | KeyCode::Char('p') => {
+            KeyCode::Char('p') => {
                 self.play_prev();
             }
             KeyCode::Char('s') => {
