@@ -8,6 +8,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Rect;
 use ratatui::Terminal;
+use std::collections::HashSet;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -40,6 +41,7 @@ pub struct App {
     current_cover_path: Option<PathBuf>,
     art_needs_render: bool,
     last_art_area: Option<Rect>,
+    played_tracks: HashSet<String>,
 }
 
 impl App {
@@ -79,6 +81,7 @@ impl App {
             current_cover_path: None,
             art_needs_render: false,
             last_art_area: None,
+            played_tracks: HashSet::new(),
         };
         app.load_selected_cover();
         app
@@ -144,6 +147,8 @@ impl App {
             if self.player_state.is_playing {
                 self.manual_stop = false;
             }
+
+            self.check_play_count();
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
@@ -425,16 +430,39 @@ impl App {
         if self.selected_index < self.library.len() {
             let track_path = self.library[self.selected_index].path.clone();
             let title = self.library[self.selected_index].title.clone();
-            self.library[self.selected_index].play_count += 1;
-            let key = track_path.to_string_lossy().to_string();
-            self.config.play_counts.insert(key, self.library[self.selected_index].play_count);
-            let _ = self.config.save();
             self.manual_stop = false;
             self.player.load_and_play(&track_path)?;
             self.set_status(&format!("♪ {}", title));
             self.load_cover_art(&track_path);
         }
         Ok(())
+    }
+
+    fn check_play_count(&mut self) {
+        if !self.player_state.is_playing || self.player_state.is_idle || self.player_state.is_paused {
+            return;
+        }
+        let track_path = match &self.player_state.current_track_path {
+            Some(p) => p.clone(),
+            None => return,
+        };
+        if self.played_tracks.contains(&track_path) {
+            return;
+        }
+        let pos = self.player_state.position.as_secs_f64();
+        let dur = self.player_state.duration.as_secs_f64();
+        if dur <= 0.0 {
+            return;
+        }
+        let threshold = 30.0f64.min(dur * 0.5);
+        if pos >= threshold {
+            self.played_tracks.insert(track_path.clone());
+            if let Some(track) = self.library.iter_mut().find(|t| t.path.to_string_lossy().as_ref() == track_path) {
+                track.play_count += 1;
+                self.config.play_counts.insert(track_path, track.play_count);
+                let _ = self.config.save();
+            }
+        }
     }
 
     fn load_selected_cover(&mut self) {
@@ -474,10 +502,6 @@ impl App {
         if self.selected_index < self.library.len().saturating_sub(1) {
             self.selected_index += 1;
             let track_path = self.library[self.selected_index].path.clone();
-            self.library[self.selected_index].play_count += 1;
-            let key = track_path.to_string_lossy().to_string();
-            self.config.play_counts.insert(key, self.library[self.selected_index].play_count);
-            let _ = self.config.save();
             self.manual_stop = false;
             let _ = self.player.load_and_play(&track_path);
             self.load_cover_art(&track_path);
@@ -488,10 +512,6 @@ impl App {
         if self.selected_index > 0 {
             self.selected_index -= 1;
             let track_path = self.library[self.selected_index].path.clone();
-            self.library[self.selected_index].play_count += 1;
-            let key = track_path.to_string_lossy().to_string();
-            self.config.play_counts.insert(key, self.library[self.selected_index].play_count);
-            let _ = self.config.save();
             self.manual_stop = false;
             let _ = self.player.load_and_play(&track_path);
             self.load_cover_art(&track_path);
