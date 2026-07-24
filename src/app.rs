@@ -283,10 +283,10 @@ impl App {
                 }
             }
             KeyCode::Right => {
-                self.player.seek(5.0)?;
+                self.player.seek(5.0);
             }
             KeyCode::Left => {
-                self.player.seek(-5.0)?;
+                self.player.seek(-5.0);
             }
             KeyCode::Char('n') => {
                 self.play_next();
@@ -330,10 +330,10 @@ impl App {
                 self.set_status(&format!("Volume: {:.0}%", vol));
             }
             KeyCode::Char('.') => {
-                self.player.seek(5.0)?;
+                self.player.seek(5.0);
             }
             KeyCode::Char(',') => {
-                self.player.seek(-5.0)?;
+                self.player.seek(-5.0);
             }
             _ => {}
         }

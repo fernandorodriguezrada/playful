@@ -121,13 +121,13 @@ impl Player {
         Ok(())
     }
 
-    pub fn seek(&self, seconds: f64) -> Result<()> {
+    pub fn seek(&self, seconds: f64) {
         let mpv = self.mpv.lock().unwrap();
         if let Some(ref mpv) = *mpv {
-            let current: f64 = mpv.get_property("time-pos")?;
-            mpv.set_property("time-pos", (current + seconds).max(0.0))?;
+            if let Ok(current) = mpv.get_property::<f64>("time-pos") {
+                let _ = mpv.set_property("time-pos", (current + seconds).max(0.0));
+            }
         }
-        Ok(())
     }
 
     pub fn set_volume(&self, volume: f64) -> Result<()> {
