@@ -87,6 +87,10 @@ impl App {
     pub fn run(&mut self) -> Result<()> {
         crossterm::terminal::enable_raw_mode()?;
         let mut stdout = io::stdout();
+        use crossterm::event::{KeyboardEnhancementFlags, PushKeyboardEnhancementFlags, PopKeyboardEnhancementFlags};
+        let _ = crossterm::execute!(stdout, PushKeyboardEnhancementFlags(
+            KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+        ));
         crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen, Show)?;
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
@@ -156,10 +160,11 @@ impl App {
         }
 
         crossterm::terminal::disable_raw_mode()?;
-        crossterm::execute!(
+        let _ = crossterm::execute!(
             terminal.backend_mut(),
+            PopKeyboardEnhancementFlags,
             crossterm::terminal::LeaveAlternateScreen
-        )?;
+        );
 
         Ok(())
     }
