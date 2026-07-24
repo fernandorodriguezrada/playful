@@ -2,6 +2,7 @@ use lofty::file::AudioFile;
 use lofty::file::TaggedFileExt;
 use lofty::read_from_path;
 use lofty::tag::ItemKey;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use walkdir::WalkDir;
@@ -33,6 +34,7 @@ pub struct Track {
     pub file_size: u64,
     #[allow(dead_code)]
     pub has_embedded_cover: bool,
+    pub play_count: u32,
 }
 
 pub fn scan_library(path: &Path) -> Vec<Track> {
@@ -224,5 +226,15 @@ fn parse_metadata(path: &Path) -> Track {
         encoding,
         file_size,
         has_embedded_cover,
+        play_count: 0,
+    }
+}
+
+pub fn merge_play_counts(tracks: &mut [Track], play_counts: &HashMap<String, u32>) {
+    for track in tracks.iter_mut() {
+        let key = track.path.to_string_lossy().to_string();
+        if let Some(count) = play_counts.get(&key) {
+            track.play_count = *count;
+        }
     }
 }

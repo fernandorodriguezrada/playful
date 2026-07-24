@@ -1,17 +1,21 @@
 use color_eyre::eyre::Result;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub music_folder: PathBuf,
+    #[serde(default)]
+    pub play_counts: HashMap<String, u32>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             music_folder: PathBuf::from(""),
+            play_counts: HashMap::new(),
         }
     }
 }

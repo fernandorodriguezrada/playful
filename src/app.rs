@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::library::{scan_library, Track};
+use crate::library::{merge_play_counts, scan_library, Track};
 use crate::player::{Player, PlayerState};
 use crate::ui;
 use color_eyre::eyre::Result;
@@ -45,7 +45,7 @@ pub struct App {
 impl App {
     pub fn new(config: Config) -> Self {
         let library = if !config.music_folder.as_os_str().is_empty() && config.music_folder.exists() {
-            scan_library(&config.music_folder)
+            { let mut lib = scan_library(&config.music_folder); merge_play_counts(&mut lib, &config.play_counts); lib }
         } else {
             Vec::new()
         };
@@ -194,7 +194,7 @@ impl App {
                 if path.exists() && path.is_dir() {
                     self.config.music_folder = path;
                     self.config.save()?;
-                    self.library = scan_library(&self.config.music_folder);
+                    self.rescan_library();
                     self.screen = AppScreen::Main;
                     let count = self.library.len();
                     self.set_status(&format!("Library loaded! {} tracks found", count));
@@ -291,7 +291,7 @@ impl App {
             }
             KeyCode::Char('r') => {
                 if !self.config.music_folder.as_os_str().is_empty() {
-                    self.library = scan_library(&self.config.music_folder);
+                    self.rescan_library();
                     self.selected_index = 0;
                     let count = self.library.len();
                     self.set_status(&format!("Library refreshed! {} tracks", count));
@@ -335,7 +335,7 @@ impl App {
                 if path.exists() && path.is_dir() {
                     self.config.music_folder = path;
                     self.config.save()?;
-                    self.library = scan_library(&self.config.music_folder);
+                    self.rescan_library();
                     self.selected_index = 0;
                     let count = self.library.len();
                     self.set_status(&format!("Music folder changed! {} tracks loaded", count));
@@ -376,7 +376,7 @@ impl App {
                     }
                     "refresh" | "r" => {
                         if !self.config.music_folder.as_os_str().is_empty() {
-                            self.library = scan_library(&self.config.music_folder);
+                            self.rescan_library();
                             self.selected_index = 0;
                             let count = self.library.len();
                             self.set_status(&format!("Library refreshed! {} tracks", count));
@@ -425,6 +425,10 @@ impl App {
         if self.selected_index < self.library.len() {
             let track_path = self.library[self.selected_index].path.clone();
             let title = self.library[self.selected_index].title.clone();
+            self.library[self.selected_index].play_count += 1;
+            let key = track_path.to_string_lossy().to_string();
+            self.config.play_counts.insert(key, self.library[self.selected_index].play_count);
+            let _ = self.config.save();
             self.manual_stop = false;
             self.player.load_and_play(&track_path)?;
             self.set_status(&format!("♪ {}", title));
@@ -470,6 +474,10 @@ impl App {
         if self.selected_index < self.library.len().saturating_sub(1) {
             self.selected_index += 1;
             let track_path = self.library[self.selected_index].path.clone();
+            self.library[self.selected_index].play_count += 1;
+            let key = track_path.to_string_lossy().to_string();
+            self.config.play_counts.insert(key, self.library[self.selected_index].play_count);
+            let _ = self.config.save();
             self.manual_stop = false;
             let _ = self.player.load_and_play(&track_path);
             self.load_cover_art(&track_path);
@@ -480,6 +488,10 @@ impl App {
         if self.selected_index > 0 {
             self.selected_index -= 1;
             let track_path = self.library[self.selected_index].path.clone();
+            self.library[self.selected_index].play_count += 1;
+            let key = track_path.to_string_lossy().to_string();
+            self.config.play_counts.insert(key, self.library[self.selected_index].play_count);
+            let _ = self.config.save();
             self.manual_stop = false;
             let _ = self.player.load_and_play(&track_path);
             self.load_cover_art(&track_path);
@@ -493,6 +505,11 @@ impl App {
     pub fn set_status(&mut self, msg: &str) {
         self.status_message = Some(msg.to_string());
         self.status_time = Instant::now();
+    }
+
+    fn rescan_library(&mut self) {
+        self.library = scan_library(&self.config.music_folder);
+        merge_play_counts(&mut self.library, &self.config.play_counts);
     }
 
     fn clear_album_art(&self) {

@@ -450,22 +450,31 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("Album:   ", Style::default().fg(D2)),
             Span::styled(&track.album, Style::default().fg(Color::White)),
         ]));
-        if !track.genre.is_empty() {
-            lines.push(Line::from(vec![
-                Span::styled("Genre:   ", Style::default().fg(D2)),
-                Span::styled(&track.genre, Style::default().fg(Color::White)),
-            ]));
-        }
-        if !track.track_number.is_empty() {
-            lines.push(Line::from(vec![
-                Span::styled("Track:   ", Style::default().fg(D2)),
-                Span::styled(&track.track_number, Style::default().fg(Color::White)),
-            ]));
-        }
         lines.push(Line::from(vec![
             Span::styled("Length:  ", Style::default().fg(D2)),
             Span::styled(
                 format_duration(track.duration),
+                Style::default().fg(Color::White),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled("Year:    ", Style::default().fg(D2)),
+            Span::styled(
+                if track.year > 0 { track.year.to_string() } else { "Unknown".into() },
+                Style::default().fg(Color::White),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled("Genre:   ", Style::default().fg(D2)),
+            Span::styled(
+                if track.genre.is_empty() { "Unknown".into() } else { track.genre.clone() },
+                Style::default().fg(Color::White),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled("Plays:   ", Style::default().fg(D2)),
+            Span::styled(
+                track.play_count.to_string(),
                 Style::default().fg(Color::White),
             ),
         ]));

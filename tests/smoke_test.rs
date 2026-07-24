@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
 
@@ -16,6 +17,7 @@ fn test_config_save_and_load() {
         let music = Path::new("/tmp/test-music-for-config");
         let config = playful::config::Config {
             music_folder: music.to_path_buf(),
+            play_counts: HashMap::new(),
         };
         config.save().expect("save");
         let loaded = playful::config::Config::load().expect("load");
