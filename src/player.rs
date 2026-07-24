@@ -124,7 +124,8 @@ impl Player {
     pub fn seek(&self, seconds: f64) -> Result<()> {
         let mpv = self.mpv.lock().unwrap();
         if let Some(ref mpv) = *mpv {
-            mpv.run_command_raw("seek", &[&seconds.to_string(), "relative"])?;
+            let current: f64 = mpv.get_property("time-pos")?;
+            mpv.set_property("time-pos", (current + seconds).max(0.0))?;
         }
         Ok(())
     }
