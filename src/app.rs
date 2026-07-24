@@ -263,7 +263,15 @@ impl App {
             }
             KeyCode::Enter => {
                 if !self.library.is_empty() {
-                    self.play_selected()?;
+                    let is_current = self.player_state.current_track_path.as_deref()
+                        .zip(self.library.get(self.selected_index))
+                        .is_some_and(|(cur, track)| cur == track.path.to_string_lossy().as_ref());
+                    if is_current {
+                        self.manual_stop = false;
+                        self.player.toggle_pause()?;
+                    } else {
+                        self.play_selected()?;
+                    }
                 }
             }
             KeyCode::Char(' ') => {
