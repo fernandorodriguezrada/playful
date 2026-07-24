@@ -345,9 +345,9 @@ fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
     let track_cw = (inner_w as f64 * 0.50).floor() as usize;
     let artist_cw = (inner_w as f64 * 0.25).floor() as usize;
     let album_cw = (inner_w as f64 * 0.25).floor() as usize;
-    let track_cw = track_cw.saturating_sub(3);
-    let artist_cw = artist_cw.saturating_sub(2);
-    let album_cw = album_cw.saturating_sub(2);
+    let track_cw = track_cw.saturating_sub(6);
+    let artist_cw = artist_cw.saturating_sub(4);
+    let album_cw = album_cw.saturating_sub(4);
 
     let rows: Vec<Row> = app
         .library
