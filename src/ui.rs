@@ -541,12 +541,6 @@ fn render_file_details(f: &mut Frame, area: Rect, app: &App) {
                 Span::styled(&track.modified, Style::default().fg(Color::White)),
             ]));
         }
-        if !track.encoding.is_empty() && track.encoding != "Unknown" {
-            lines.push(Line::from(vec![
-                plabel("Type:    "),
-                Span::styled(track.encoding.clone(), Style::default().fg(Color::White)),
-            ]));
-        }
         if track.year > 0 {
             lines.push(Line::from(vec![
                 plabel("Year:    "),
