@@ -476,35 +476,6 @@ fn render_info_panel(f: &mut Frame, area: Rect, app: &App) {
         )));
     }
 
-    lines.push(Line::from(vec![Span::styled(
-        "Controls",
-        Style::default()
-            .fg(P)
-            .add_modifier(Modifier::BOLD),
-    )]));
-    let shortcuts = [
-        ("↑↓/jk", "Navigate"),
-        ("Enter", "Play track"),
-        ("Space", "Play/Pause"),
-        ("n/p", "Next/Prev"),
-        ("s", "Stop"),
-        ("+/-", "Volume"),
-        ("./,", "Seek ±5s"),
-        ("c", "Change folder"),
-        ("r", "Refresh"),
-        ("q", "Quit"),
-        ("Alt+;",  "Command palette"),
-    ];
-    for (key, action) in &shortcuts {
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!("  {:<8}", key),
-                Style::default().fg(C),
-            ),
-            Span::styled(*action, Style::default().fg(D2)),
-        ]));
-    }
-
     let paragraph = Paragraph::new(lines)
         .wrap(Wrap { trim: false })
         .block(
