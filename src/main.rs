@@ -14,7 +14,7 @@ const HELP: &str = concat!(
     "  c           Change folder\n",
     "  r           Refresh\n",
     "  q           Quit\n",
-    "  :           Command palette\n",
+    "  Ctrl+;      Command palette\n",
 );
 
 fn main() -> Result<()> {

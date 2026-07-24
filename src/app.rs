@@ -4,7 +4,7 @@ use crate::player::{Player, PlayerState};
 use crate::ui;
 use color_eyre::eyre::Result;
 use crossterm::cursor::Show;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Rect;
 use ratatui::Terminal;
@@ -275,7 +275,7 @@ impl App {
                 self.player.stop()?;
                 self.set_status("Stopped");
             }
-            KeyCode::Char(':') => {
+            KeyCode::Char(';') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.command_mode = true;
                 self.command_input.clear();
             }
