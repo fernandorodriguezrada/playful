@@ -503,14 +503,6 @@ fn format_sample_rate(hz: u32) -> String {
     format!("{:.1} kHz", hz as f64 / 1000.0)
 }
 
-fn format_channels(n: u8) -> String {
-    match n {
-        1 => "Mono".into(),
-        2 => "Stereo".into(),
-        _ if n > 0 => format!("{} ch", n),
-        _ => String::new(),
-    }
-}
 
 fn format_file_size(bytes: u64) -> String {
     if bytes == 0 { return String::new() }
@@ -547,12 +539,6 @@ fn render_file_details(f: &mut Frame, area: Rect, app: &App) {
             lines.push(Line::from(vec![
                 plabel("Date:    "),
                 Span::styled(&track.modified, Style::default().fg(Color::White)),
-            ]));
-        }
-        if track.channels > 0 {
-            lines.push(Line::from(vec![
-                plabel("Channels:"),
-                Span::styled(format_channels(track.channels), Style::default().fg(Color::White)),
             ]));
         }
         if !track.encoding.is_empty() && track.encoding != "Unknown" {
