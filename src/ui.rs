@@ -303,8 +303,8 @@ fn render_change_folder_fullscreen(f: &mut Frame, area: Rect, app: &App) {
     f.set_cursor_position((cursor_x.min(right_edge), input_rect.y + 1));
 }
 
-fn marquee_text(text: &str, offset: usize, cell_width: usize) -> String {
-    if text.chars().count() <= cell_width {
+fn marquee_text(text: &str, offset: usize, _cell_width: usize) -> String {
+    if text.chars().count() <= 16 {
         return text.to_string();
     }
     let chars: Vec<char> = text.chars().collect();
