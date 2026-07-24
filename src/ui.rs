@@ -175,7 +175,7 @@ fn render_content(f: &mut Frame, area: Rect, app: &App) {
     let right_chunks = if has_art {
         Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Length(10)])
+            .constraints([Constraint::Min(1), Constraint::Length(12)])
             .split(chunks[1])
     } else {
         Layout::default()
