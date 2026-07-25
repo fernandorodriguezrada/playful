@@ -43,6 +43,7 @@ pub struct App {
     last_art_area: Option<Rect>,
     played_tracks: HashSet<String>,
     fade_state: Option<FadeState>,
+    pre_fade_volume: f64,
 }
 
 #[derive(Clone, Copy)]
@@ -90,6 +91,7 @@ impl App {
             last_art_area: None,
             played_tracks: HashSet::new(),
             fade_state: None,
+            pre_fade_volume: 50.0,
         };
         app.load_selected_cover();
         app
@@ -506,12 +508,13 @@ impl App {
             return;
         }
         if self.player_state.is_paused {
-            let target = self.player_state.volume;
+            let target = self.pre_fade_volume;
             let _ = self.player.toggle_pause();
             let _ = self.player.set_volume(0.0);
             self.fade_state = Some(FadeState::FadingIn { target_volume: target, step: 0 });
         } else {
-            self.fade_state = Some(FadeState::FadingOut { original_volume: self.player_state.volume, step: 0 });
+            self.pre_fade_volume = self.player_state.volume;
+            self.fade_state = Some(FadeState::FadingOut { original_volume: self.pre_fade_volume, step: 0 });
         }
     }
 
