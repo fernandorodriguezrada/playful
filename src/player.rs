@@ -29,7 +29,7 @@ impl Default for PlayerState {
             position: Duration::from_secs(0),
             duration: Duration::from_secs(0),
             current_track_path: None,
-            volume: 50.0,
+            volume: 150.0,
         }
     }
 }
@@ -58,6 +58,7 @@ impl Player {
                 "--no-video",
                 "--audio-display=no",
                 "--keep-open=no",
+                "--volume=150",
             ])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
