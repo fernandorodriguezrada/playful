@@ -320,7 +320,7 @@ impl App {
                 return Ok(false);
             }
             KeyCode::Char('+') | KeyCode::Char('=') => {
-                let vol = (self.player_state.volume + 5.0).min(200.0);
+                let vol = (self.player_state.volume + 5.0).min(100.0);
                 self.player.set_volume(vol)?;
                 self.set_status(&format!("Volume: {:.0}%", vol));
             }
@@ -427,7 +427,7 @@ impl App {
                     vol if vol.starts_with("volume ") || vol.starts_with("vol ") => {
                         let num_str = vol.split_whitespace().last().unwrap_or("50");
                         if let Ok(v) = num_str.parse::<f64>() {
-                            let vol = v.clamp(0.0, 200.0);
+                            let vol = v.clamp(0.0, 100.0);
                             self.player.set_volume(vol)?;
                             self.set_status(&format!("Volume: {:.0}%", vol));
                         }
