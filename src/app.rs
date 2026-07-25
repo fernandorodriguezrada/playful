@@ -42,17 +42,7 @@ pub struct App {
     art_needs_render: bool,
     last_art_area: Option<Rect>,
     played_tracks: HashSet<String>,
-    fade_state: Option<FadeState>,
-    pre_fade_volume: f64,
 }
-
-#[derive(Clone, Copy)]
-enum FadeState {
-    FadingOut { start: Instant, start_volume: f64 },
-    FadingIn { start: Instant, target_volume: f64 },
-}
-
-const FADE_DURATION: Duration = Duration::from_millis(500);
 
 impl App {
     pub fn new(config: Config) -> Self {
@@ -92,8 +82,6 @@ impl App {
             art_needs_render: false,
             last_art_area: None,
             played_tracks: HashSet::new(),
-            fade_state: None,
-            pre_fade_volume: 50.0,
         };
         app.load_selected_cover();
         app
@@ -161,7 +149,6 @@ impl App {
             }
 
             self.check_play_count();
-            self.process_fade();
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
@@ -496,59 +483,14 @@ impl App {
         if self.player_state.is_idle {
             return;
         }
-        if let Some(fade) = self.fade_state {
-            self.fade_state = None;
-            match fade {
-                FadeState::FadingOut { start_volume, .. } => {
-                    let _ = self.player.set_volume(start_volume);
-                }
-                FadeState::FadingIn { target_volume, .. } => {
-                    let _ = self.player.set_volume(target_volume);
-                    let _ = self.player.set_pause(true);
-                }
-            }
-            return;
-        }
+        let _ = self.player.script_message("playful_fade_abort", &[]);
         if self.player_state.is_paused {
-            let target = self.pre_fade_volume.max(1.0);
-            let _ = self.player.toggle_pause();
-            let _ = self.player.set_volume(0.0);
-            self.fade_state = Some(FadeState::FadingIn { start: Instant::now(), target_volume: target });
+            let _ = self.player.script_message("playful_fade_in", &[&self.player_state.volume.to_string()]);
         } else {
-            self.pre_fade_volume = self.player_state.volume.max(1.0);
-            self.fade_state = Some(FadeState::FadingOut { start: Instant::now(), start_volume: self.pre_fade_volume });
+            let _ = self.player.script_message("playful_fade_out", &[]);
         }
     }
 
-    fn process_fade(&mut self) {
-        let Some(fade) = self.fade_state else { return };
-        let (done, vol) = match fade {
-            FadeState::FadingOut { start, start_volume } => {
-                let t = (start.elapsed().as_secs_f64() / FADE_DURATION.as_secs_f64()).min(1.0);
-                let eased = ease_out_cubic(t);
-                (t >= 1.0, start_volume * (1.0 - eased))
-            }
-            FadeState::FadingIn { start, target_volume } => {
-                let t = (start.elapsed().as_secs_f64() / FADE_DURATION.as_secs_f64()).min(1.0);
-                let eased = ease_out_cubic(t);
-                (t >= 1.0, target_volume * eased)
-            }
-        };
-        let _ = self.player.set_volume(vol);
-        if done {
-            if let FadeState::FadingOut { .. } = fade {
-                let _ = self.player.set_pause(true);
-            }
-            self.fade_state = None;
-        }
-    }
-}
-
-fn ease_out_cubic(t: f64) -> f64 {
-    1.0 - f64::powf(1.0 - t, 3.0)
-}
-
-impl App {
     fn load_selected_cover(&mut self) {
         let path = self.library.get(self.selected_index).map(|t| t.path.clone());
         if let Some(p) = path {
