@@ -425,11 +425,8 @@ fn render_track_list(f: &mut Frame, area: Rect, app: &App) {
 
     let visible_rows = area.height.saturating_sub(3) as usize;
     let max_cursor_pos = visible_rows.saturating_sub(3);
-    let offset = if app.selected_index > max_cursor_pos {
-        app.selected_index - max_cursor_pos
-    } else {
-        0
-    };
+    let max_offset = app.library.len().saturating_sub(visible_rows);
+    let offset = app.selected_index.saturating_sub(max_cursor_pos).min(max_offset);
     let mut table_state = TableState::default();
     table_state.select(Some(app.selected_index));
     *table_state.offset_mut() = offset;
