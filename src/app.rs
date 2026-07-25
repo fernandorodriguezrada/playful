@@ -42,6 +42,13 @@ pub struct App {
     art_needs_render: bool,
     last_art_area: Option<Rect>,
     played_tracks: HashSet<String>,
+    fade_state: Option<FadeState>,
+}
+
+#[derive(Clone, Copy)]
+enum FadeState {
+    FadingOut { original_volume: f64, step: u8 },
+    FadingIn { target_volume: f64, step: u8 },
 }
 
 impl App {
@@ -82,6 +89,7 @@ impl App {
             art_needs_render: false,
             last_art_area: None,
             played_tracks: HashSet::new(),
+            fade_state: None,
         };
         app.load_selected_cover();
         app
@@ -149,6 +157,7 @@ impl App {
             }
 
             self.check_play_count();
+            self.process_fade();
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
@@ -268,7 +277,7 @@ impl App {
                         .is_some_and(|(cur, track)| cur == track.path.to_string_lossy().as_ref());
                     if is_current {
                         self.manual_stop = false;
-                        self.player.toggle_pause()?;
+                        self.start_fade();
                     } else {
                         self.play_selected()?;
                     }
@@ -279,7 +288,7 @@ impl App {
                     self.play_selected()?;
                 } else {
                     self.manual_stop = false;
-                    self.player.toggle_pause()?;
+                    self.start_fade();
                 }
             }
             KeyCode::Right => {
@@ -475,6 +484,62 @@ impl App {
                 track.play_count += 1;
                 self.config.play_counts.insert(track_path, track.play_count);
                 let _ = self.config.save();
+            }
+        }
+    }
+
+    fn start_fade(&mut self) {
+        if self.player_state.is_idle {
+            return;
+        }
+        if let Some(fade) = self.fade_state {
+            self.fade_state = None;
+            match fade {
+                FadeState::FadingOut { original_volume, .. } => {
+                    let _ = self.player.set_volume(original_volume);
+                }
+                FadeState::FadingIn { target_volume, .. } => {
+                    let _ = self.player.set_volume(target_volume);
+                    let _ = self.player.set_pause(true);
+                }
+            }
+            return;
+        }
+        if self.player_state.is_paused {
+            let target = self.player_state.volume;
+            let _ = self.player.toggle_pause();
+            let _ = self.player.set_volume(0.0);
+            self.fade_state = Some(FadeState::FadingIn { target_volume: target, step: 0 });
+        } else {
+            self.fade_state = Some(FadeState::FadingOut { original_volume: self.player_state.volume, step: 0 });
+        }
+    }
+
+    fn process_fade(&mut self) {
+        let Some(fade) = &self.fade_state else { return };
+        match *fade {
+            FadeState::FadingOut { original_volume, step } => {
+                let next = step + 1;
+                let fraction = 1.0 - next as f64 / 3.0;
+                let vol = (original_volume * fraction).max(0.0);
+                let _ = self.player.set_volume(vol);
+                if next >= 3 {
+                    let _ = self.player.set_pause(true);
+                    self.fade_state = None;
+                } else {
+                    self.fade_state = Some(FadeState::FadingOut { original_volume, step: next });
+                }
+            }
+            FadeState::FadingIn { target_volume, step } => {
+                let next = step + 1;
+                let fraction = next as f64 / 3.0;
+                let vol = (target_volume * fraction).min(target_volume);
+                let _ = self.player.set_volume(vol);
+                if next >= 3 {
+                    self.fade_state = None;
+                } else {
+                    self.fade_state = Some(FadeState::FadingIn { target_volume, step: next });
+                }
             }
         }
     }

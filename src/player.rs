@@ -98,6 +98,14 @@ impl Player {
         Ok(())
     }
 
+    pub fn set_pause(&self, paused: bool) -> Result<()> {
+        let mpv = self.mpv.lock().unwrap();
+        if let Some(ref mpv) = *mpv {
+            mpv.set_property("pause", paused)?;
+        }
+        Ok(())
+    }
+
     pub fn stop(&self) -> Result<()> {
         let mpv = self.mpv.lock().unwrap();
         if let Some(ref mpv) = *mpv {
