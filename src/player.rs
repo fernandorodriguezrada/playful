@@ -1,57 +1,12 @@
 use color_eyre::eyre::{eyre, Result};
 use mpvipc::Mpv;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-
-const FADE_LUA: &str = r#"
-local at = nil
-local function ka()
-    if at then at:kill(); at = nil end
-end
-local function eoc(t) return 1 - (1 - t) ^ 3 end
-local function fo()
-    ka()
-    local s = mp.get_property_number("volume")
-    local n, i = 30, 0.01
-    local st = 0
-    local t = mp.add_periodic_timer(i, function()
-        st = st + 1
-        local ti = st / n
-        mp.set_property_number("volume", s * (1 - eoc(ti)))
-        if st >= n then
-            mp.set_property_bool("pause", true)
-            t:kill(); at = nil
-        end
-    end)
-    t:resume(); at = t
-end
-local function fi(vol)
-    ka()
-    mp.set_property_number("volume", 0)
-    mp.set_property_bool("pause", false)
-    local n, i = 30, 0.01
-    local st = 0
-    local t = mp.add_periodic_timer(i, function()
-        st = st + 1
-        local ti = st / n
-        mp.set_property_number("volume", vol * eoc(ti))
-        if st >= n then
-            t:kill(); at = nil
-        end
-    end)
-    t:resume(); at = t
-end
-local function fa() ka() end
-mp.register_script_message("playful_fade_out", fo)
-mp.register_script_message("playful_fade_in", fi)
-mp.register_script_message("playful_fade_abort", fa)
-"#;
 
 pub struct Player {
     mpv: Arc<Mutex<Option<Mpv>>>,
     socket_path: String,
-    script_path: PathBuf,
 }
 
 #[derive(Clone, Debug)]
@@ -81,13 +36,10 @@ impl Default for PlayerState {
 
 impl Player {
     pub fn new() -> Self {
-        let pid = std::process::id();
-        let socket_path = format!("/tmp/playful-mpv-{}", pid);
-        let script_path = PathBuf::from(format!("/tmp/playful-fade-{}.lua", pid));
+        let socket_path = format!("/tmp/playful-mpv-{}", std::process::id());
         Self {
             mpv: Arc::new(Mutex::new(None)),
             socket_path,
-            script_path,
         }
     }
 
@@ -97,8 +49,6 @@ impl Player {
             .output();
 
         let _ = std::fs::remove_file(&self.socket_path);
-        let _ = std::fs::remove_file(&self.script_path);
-        let _ = std::fs::write(&self.script_path, FADE_LUA);
 
         std::process::Command::new("mpv")
             .args([
@@ -109,7 +59,6 @@ impl Player {
                 "--audio-display=no",
                 "--keep-open=no",
                 "--ao=pulse",
-                &format!("--script={}", self.script_path.display()),
             ])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -153,16 +102,6 @@ impl Player {
         let mpv = self.mpv.lock().unwrap();
         if let Some(ref mpv) = *mpv {
             mpv.set_property("pause", paused)?;
-        }
-        Ok(())
-    }
-
-    pub fn script_message(&self, name: &str, args: &[&str]) -> Result<()> {
-        let mpv = self.mpv.lock().unwrap();
-        if let Some(ref mpv) = *mpv {
-            let mut full: Vec<&str> = vec![name];
-            full.extend_from_slice(args);
-            mpv.run_command_raw("script-message", &full)?;
         }
         Ok(())
     }
@@ -239,7 +178,6 @@ impl Player {
         }
         *mpv = None;
         let _ = std::fs::remove_file(&self.socket_path);
-        let _ = std::fs::remove_file(&self.script_path);
     }
 }
 

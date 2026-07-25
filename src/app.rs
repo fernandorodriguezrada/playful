@@ -483,12 +483,7 @@ impl App {
         if self.player_state.is_idle {
             return;
         }
-        let _ = self.player.script_message("playful_fade_abort", &[]);
-        if self.player_state.is_paused {
-            let _ = self.player.script_message("playful_fade_in", &[&self.player_state.volume.to_string()]);
-        } else {
-            let _ = self.player.script_message("playful_fade_out", &[]);
-        }
+        let _ = self.player.toggle_pause();
     }
 
     fn load_selected_cover(&mut self) {
