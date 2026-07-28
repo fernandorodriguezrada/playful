@@ -22,15 +22,27 @@ Built with Rust, ratatui, and mpv as the audio backend. No bloated GUIs — just
 
 ## Installation
 
+### 1. Install mpv
+
 ```bash
-# Install mpv (if not already installed)
 sudo apt install mpv
+```
 
-# Install playful
-cargo install --path /path/to/playful
+### 2. Install playful
 
-# Or from the repo
-cargo install --git https://github.com/YOUR_USER/playful
+**Option A — Download the pre-built binary (recommended):**
+
+Grab the latest `playful` binary from the [Releases page](https://github.com/fernandorodriguezrada/playful/releases), then:
+
+```bash
+chmod +x playful
+sudo mv playful /usr/local/bin/
+```
+
+**Option B — Build from source with Cargo:**
+
+```bash
+cargo install --git https://github.com/fernandorodriguezrada/playful
 ```
 
 ## Usage
@@ -50,12 +62,14 @@ On first launch, you'll be prompted to enter your music folder path. This is sav
 | `↑` / `↓` or `j` / `k` | Navigate track list |
 | `PgUp` / `PgDn` | Scroll 10 tracks |
 | `Home` / `End` | Jump to first/last track |
-| `Enter` | Play selected track |
+| `Enter` | Play selected track / Pause (if currently playing) |
 | `Space` | Play / Pause |
-| `n` / `p` or `→` / `←` | Next / Previous track |
+| `n` / `p` | Next / Previous track |
+| `←` / `→` | Seek backward / forward 5s |
+| `,` / `.` | Seek backward / forward 5s |
 | `s` | Stop |
 | `+` / `-` | Volume up / down |
-| `.` / `,` | Seek forward / backward 5s |
+| `Alt+;` | Open command palette |
 | `c` | Change music folder |
 | `r` | Refresh library |
 | `q` | Quit |
